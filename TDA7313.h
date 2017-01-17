@@ -59,6 +59,22 @@ class TDA7313 {
 		void attenuator_decrease(int input);
 		void attenuator_increase(int input);
 
+		/* bass */
+		unsigned char get_bass_value(void);
+		void set_bass_value(unsigned char val);
+		void increase_bass(void);
+		void decrease_bass(void);
+		bool is_bass_at_max(void);
+		bool is_bass_at_min(void);
+
+		/* treble */
+		unsigned char get_treble_value(void);
+		void set_treble_value(unsigned char val);
+		void increase_treble(void);
+		void decrease_treble(void);
+		bool is_treble_at_max(void);
+		bool is_treble_at_min(void);
+
 		/* returns bytes that can be written to I2C channel,
 		 * options used to determine what should be sent
 		 */

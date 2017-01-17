@@ -1,6 +1,10 @@
-#define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do this in one cpp file
+#define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 #include "TDA7313.h"
+
+#ifndef ARDUINO
+#define DEBUG
+#endif
 
 
 TEST_CASE("TDA7313 I2C", "[i2c]" ) {
@@ -112,5 +116,84 @@ TEST_CASE("TDA7313 I2C", "[i2c]" ) {
 		delete seq;
 	}
 
+	SECTION("checking bass") {
+		auto seq = tda->get_i2c_sequence(OPT_BASS);
+		REQUIRE((*seq)[0] == 0b01100111);
+		delete seq;
+
+		REQUIRE(tda->get_bass_value() == 0b0111);
+		for (int i = 0; i < 7; i++) {
+			tda->decrease_bass();
+		}
+		REQUIRE(tda->get_bass_value() == 0);
+		tda->decrease_bass();
+		REQUIRE(tda->get_bass_value() == 0);
+		REQUIRE(tda->is_bass_at_min() == true);
+
+		for (int i = 0; i < 7; i++) {
+			tda->increase_bass();
+		}
+		REQUIRE(tda->get_bass_value() == 0b0111);
+		tda->increase_bass();
+		REQUIRE(tda->get_bass_value() == 0b1111);
+
+		for (int i = 0; i < 7; i++) {
+			tda->increase_bass();
+		}
+		REQUIRE(tda->get_bass_value() == 0b1000);
+		REQUIRE(tda->is_bass_at_max() == true);
+
+		for (int i = 0; i < 15; i++) {
+			tda->decrease_bass();
+		}
+		REQUIRE(tda->is_bass_at_min() == true);
+
+		tda->set_bass_value(2);
+		REQUIRE(tda->get_bass_value() == 2);
+
+		seq = tda->get_i2c_sequence(OPT_BASS);
+		REQUIRE((*seq)[0] == 0b01100010);
+		delete seq;
+	}
+
+	SECTION("checking treble") {
+		auto seq = tda->get_i2c_sequence(OPT_TREBLE);
+		REQUIRE((*seq)[0] == 0b01110111);
+		delete seq;
+
+		REQUIRE(tda->get_treble_value() == 0b0111);
+		for (int i = 0; i < 7; i++) {
+			tda->decrease_treble();
+		}
+		REQUIRE(tda->get_treble_value() == 0);
+		tda->decrease_treble();
+		REQUIRE(tda->get_treble_value() == 0);
+		REQUIRE(tda->is_treble_at_min() == true);
+
+		for (int i = 0; i < 7; i++) {
+			tda->increase_treble();
+		}
+		REQUIRE(tda->get_treble_value() == 0b0111);
+		tda->increase_treble();
+		REQUIRE(tda->get_treble_value() == 0b1111);
+
+		for (int i = 0; i < 7; i++) {
+			tda->increase_treble();
+		}
+		REQUIRE(tda->get_treble_value() == 0b1000);
+		REQUIRE(tda->is_treble_at_max() == true);
+
+		for (int i = 0; i < 15; i++) {
+			tda->decrease_treble();
+		}
+		REQUIRE(tda->is_treble_at_min() == true);
+
+		tda->set_treble_value(2);
+		REQUIRE(tda->get_treble_value() == 2);
+
+		seq = tda->get_i2c_sequence(OPT_TREBLE);
+		REQUIRE((*seq)[0] == 0b01110010);
+		delete seq;
+	}
 	delete tda;
 }

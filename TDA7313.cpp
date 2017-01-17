@@ -21,11 +21,11 @@ TDA7313::TDA7313() {
 	//initialize audio switch, gain 11.25dB, loudness on, input 1
 	switch_data = 0b01000000;
 
-	//initialize bass, -14dB
-	bass_data = 0b01100000;
+	//initialize bass, 0dB
+	bass_data = 0b01100111;
 
-	//initialize treble, -14dB
-	treble_data = 0b01110000;
+	//initialize treble, 0dB
+	treble_data = 0b01110111;
 
 	//initialize attenuators
 	lf_att_data = 0b10000000;
@@ -199,4 +199,103 @@ void TDA7313::attenuator_increase(int input) {
 		return;
 
 	attenuator_set_value(input, --val);
+}
+
+/* these functions are for bass and treble, and operate with low 4 bits */
+static inline unsigned char get_value(unsigned char data) {
+	return data & 0b1111;
+}
+
+static void set_value(unsigned char *data, unsigned char val) {
+	val &= 0b00001111; // clear high 4 bits
+	*data = (*data & 0b11110000) + val;
+}
+
+//14dB
+static inline bool is_max(unsigned char data) {
+	return (data & 0b1111) == 0b1000;
+}
+
+static inline bool is_min(unsigned char data) {
+	return (data & 0b1111) == 0;
+}
+
+static void increase_value(unsigned char *data) {
+	unsigned char val = get_value(*data);
+	if (is_max(val))
+		return;
+
+	if (val == 0b0111) {
+		val = 0b1111;
+	} else if ((1 << 3) & val) { //checking sign
+		val -= 1;
+	} else {
+		val += 1;
+	}
+	set_value(data, val);
+}
+
+static void decrease_value(unsigned char *data) {
+	unsigned char val = get_value(*data);
+	if (is_min(val))
+		return;
+
+	if (val == 0b1111) {
+		val = 0b0111;
+	} else if ((1 << 3) & val) { //checking sign
+		val += 1;
+	} else {
+		val -= 1;
+	}
+	set_value(data, val);
+}
+
+/* bass */
+unsigned char TDA7313::get_bass_value(void) {
+	return get_value(bass_data);
+}
+
+void TDA7313::set_bass_value(unsigned char val) {
+	set_value(&bass_data, val);
+}
+
+bool TDA7313::is_bass_at_max(void) {
+	return is_max(bass_data);
+}
+
+bool TDA7313::is_bass_at_min(void) {
+	return is_min(bass_data);
+}
+
+void TDA7313::increase_bass(void) {
+	increase_value(&bass_data);
+}
+
+void TDA7313::decrease_bass(void) {
+	decrease_value(&bass_data);
+}
+
+/* treble */
+unsigned char TDA7313::get_treble_value(void) {
+	return get_value(treble_data);
+}
+
+void TDA7313::set_treble_value(unsigned char val) {
+	set_value(&treble_data, val);
+}
+
+bool TDA7313::is_treble_at_max(void) {
+	return is_max(treble_data);
+}
+
+bool TDA7313::is_treble_at_min(void) {
+	return is_min(treble_data);
+}
+
+void TDA7313::increase_treble(void) {
+	increase_value(&treble_data);
+}
+
+void TDA7313::decrease_treble(void) {
+	decrease_value(&treble_data);
 }
