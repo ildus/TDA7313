@@ -1,7 +1,7 @@
 #ifndef _TDA7313_H_
 #define _TDA7313_H_
 
-#ifdef Arduino_h
+#ifdef ARDUINO
 #include "Wire.h"
 #endif
 
@@ -11,11 +11,13 @@ const unsigned char OPT_VOLUME = 0b10000000,
 					OPT_SWITCH = 0b01000000,
 					OPT_BASS   = 0b00100000,
 					OPT_TREBLE = 0b00010000,
-					OPT_ATTENUATORS = 0b00001000;
+					OPT_ATTENUATORS = 0b00001000,
+					OPT_ALL = 0xFF;
 
 
 class TDA7313 {
 	private:
+		unsigned char	temp_memory[4];
 		unsigned char	vol_ctrl_data,
 						switch_data,
 						bass_data,
@@ -49,6 +51,7 @@ class TDA7313 {
 
 		/* mute is attenuator's lowest level for all output channels */
 		void mute(void);
+		void unmute(void);
 
 		/* attenuators */
 		void attenuator_set_value(int input, unsigned char value);
@@ -56,10 +59,13 @@ class TDA7313 {
 		void attenuator_decrease(int input);
 		void attenuator_increase(int input);
 
+		/* returns bytes that can be written to I2C channel,
+		 * options used to determine what should be sent
+		 */
 		std::vector<unsigned char>* get_i2c_sequence(int options);
 
 		/* write to I2C */
-		void write_data(unsigned char *buf, int length);
+		void write(int options);
 };
 
 #endif

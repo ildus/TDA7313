@@ -11,7 +11,7 @@ using namespace std;
 #include <cstring>
 
 TDA7313::TDA7313() {
-#ifdef Arduino_h
+#ifdef ARDUINO
 	Wire.begin();
 #endif
 
@@ -35,12 +35,14 @@ TDA7313::TDA7313() {
 }
 
 /* I2C communication */
-void TDA7313::write_data(unsigned char *buf, int length) {
-#ifdef Arduino_h
+void TDA7313::write(int options) {
+#ifdef ARDUINO
 	Wire.beginTransmission(0x44); // 01000100
-	for (int i = 0; i < length; i++) {
-		Wire.write(buf[i]);
+	std::vector<unsigned char> *v = get_i2c_sequence(options);
+	for (int i = 0; i < v->size(); i++) {
+		Wire.write((*v)[i]);
 	}
+	delete v;
 	Wire.endTransmission();
 #endif
 }
@@ -146,8 +148,16 @@ int TDA7313::get_gain(void) {
 }
 
 void TDA7313::mute(void) {
-	for (int i; i < 4; i++) {
+	for (int i = 0; i < 4; i++) {
+		temp_memory[i] = attenuator_get_value(i);
 		attenuator_set_value(i, 0xFF);
+	}
+}
+
+void TDA7313::unmute(void) {
+	for (int i = 0; i < 4; i++) {
+		attenuator_set_value(i, temp_memory[i]);
+		temp_memory[i] = 0;
 	}
 }
 

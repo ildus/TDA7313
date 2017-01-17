@@ -10,14 +10,14 @@ TEST_CASE("TDA7313 I2C", "[i2c]" ) {
 		REQUIRE(tda->get_volume() == 0b111111); //lowest level
 		auto seq = tda->get_i2c_sequence(OPT_VOLUME);
 		REQUIRE((*seq)[0] == 0b00111111);
-		free(seq);
+		delete seq;
 
 		tda->increase_volume();
 		seq = tda->get_i2c_sequence(OPT_VOLUME);
 
 		REQUIRE(seq->size() == 1);
 		REQUIRE((*seq)[0] == 0b00111110);
-		free(seq);
+		delete seq;
 
 		tda->set_volume(0b11000001);
 		REQUIRE(tda->get_volume() == 0b00000001);
@@ -46,7 +46,7 @@ TEST_CASE("TDA7313 I2C", "[i2c]" ) {
 
 		auto seq = tda->get_i2c_sequence(OPT_SWITCH);
 		REQUIRE((*seq)[0] == 0b01000000);
-		free(seq);
+		delete seq;
 
 		tda->set_input(2);
 		REQUIRE(tda->get_input() == 2);
@@ -62,7 +62,7 @@ TEST_CASE("TDA7313 I2C", "[i2c]" ) {
 
 		seq = tda->get_i2c_sequence(OPT_SWITCH);
 		REQUIRE((*seq)[0] == 0b01001110);
-		free(seq);
+		delete seq;
 	}
 
 	SECTION("checking attenuators") {
@@ -91,8 +91,26 @@ TEST_CASE("TDA7313 I2C", "[i2c]" ) {
 		REQUIRE((*seq)[1] == 0b10100000);
 		REQUIRE((*seq)[2] == 0b11000001);
 		REQUIRE((*seq)[3] == 0b11100010);
-		free(seq);
+		delete seq;
+
+		// all to lowest level
+		tda->mute();
+		seq = tda->get_i2c_sequence(OPT_ATTENUATORS);
+		REQUIRE((*seq)[0] == 0b10011111);
+		REQUIRE((*seq)[1] == 0b10111111);
+		REQUIRE((*seq)[2] == 0b11011111);
+		REQUIRE((*seq)[3] == 0b11111111);
+		delete seq;
+
+		// restore values
+		tda->unmute();
+		seq = tda->get_i2c_sequence(OPT_ATTENUATORS);
+		REQUIRE((*seq)[0] == 0b10011111);
+		REQUIRE((*seq)[1] == 0b10100000);
+		REQUIRE((*seq)[2] == 0b11000001);
+		REQUIRE((*seq)[3] == 0b11100010);
+		delete seq;
 	}
 
-	free(tda);
+	delete tda;
 }
