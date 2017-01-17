@@ -1,3 +1,9 @@
+/*
+ *	TDA7313.cpp - TDA7313 audoprocessor library.
+ *	Author - Ildus Kurbangaliev, 2017-01-17.
+ *  Released into the public domain.
+ */
+
 using namespace std;
 
 #include "TDA7313.h"
@@ -68,7 +74,7 @@ void TDA7313::decrease_volume(void) {
 }
 
 std::vector<unsigned char>* TDA7313::get_i2c_sequence(int options) {
-	auto v = new std::vector<unsigned char>();
+	std::vector<unsigned char> *v = new std::vector<unsigned char>();
 
 	if (options & OPT_VOLUME)
 		v->push_back(vol_ctrl_data);
@@ -86,7 +92,6 @@ std::vector<unsigned char>* TDA7313::get_i2c_sequence(int options) {
 	if (options & OPT_ATTENUATORS) {
 		for (int i; i < 4; i++) {
 			unsigned char *att_data = get_attenuator(i);
-			assert(att_data != nullptr);
 			v->push_back(*att_data);
 		}
 	}
@@ -143,23 +148,19 @@ unsigned char *TDA7313::get_attenuator(int input) {
 		case 0: return &lf_att_data;
 		case 1: return &rf_att_data;
 		case 2: return &lr_att_data;
-		case 3: return &rr_att_data;
-	}
-	return nullptr;
+	};
+
+	return &rr_att_data;
 }
 
 void TDA7313::attenuator_set_value(int input, unsigned char value) {
 	unsigned char *att_data = get_attenuator(input);
-	if (att_data == nullptr)
-		return;
-
 	value &= 0b00011111;
 	*att_data = (*att_data & 0b11100000) + value;
 }
 
 unsigned char TDA7313::attenuator_get_value(int input) {
 	unsigned char *att_data = get_attenuator(input);
-	assert(att_data != nullptr);
 	return *att_data & 0b00011111;
 }
 

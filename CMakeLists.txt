@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 project(tda7313_testing)
+include_directories(.)
+add_executable(test tests/test.cpp)
 add_library(tda7313 STATIC TDA7313.cpp)
-add_executable(test test.cpp)
 target_link_libraries(test tda7313)
