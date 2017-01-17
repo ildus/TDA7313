@@ -5,66 +5,47 @@
 #include "Wire.h"
 #endif
 
-/* Volume:
- * -78.75dB ... 0
- * But: functions operate with positive values 0..78.75dB
- */
-struct volume_ctrl
-{
-	unsigned int high_bits:2;
-	unsigned int b:3;
-	unsigned int a:3;
-};
+#include <vector>
 
-struct audio_switch_ctrl
-{
-	unsigned int high_bits:3;
-	unsigned int gain:2;
-	unsigned int loudness:1;
-	unsigned int input:2;
-};
+const unsigned char OPT_VOLUME = 0b10000000,
+					OPT_SWITCH = 0b01000000,
+					OPT_BASS   = 0b00100000,
+					OPT_TREBLE = 0b00010000,
+					OPT_ATTENUATORS = 0b00001000;
 
-struct bass_and_treble_ctrl
-{
-	unsigned int high_bits:4;
-	unsigned int level:4;
-};
-
-struct attenuator_ctrl
-{
-	unsigned int high_bits: 3;
-	unsigned int b: 2;
-	unsigned int a: 3;
-};
 
 class TDA7313 {
 	private:
-		volume_ctrl vol_ctrl_data;
-		audio_switch_ctrl switch_data;
-		bass_and_treble_ctrl bass_data;
-		bass_and_treble_ctrl treble_data;
-		attenuator_ctrl lf_att_data;
-		attenuator_ctrl rf_att_data;
-		attenuator_ctrl lr_att_data;
-		attenuator_ctrl rr_att_data;
+		unsigned char	vol_ctrl_data,
+						switch_data,
+						bass_data,
+						treble_data,
+						lf_att_data,
+						rf_att_data,
+						lr_att_data,
+						rr_att_data;
 
-		void write_data(unsigned char *buf, int length);
-		attenuator_ctrl* get_attenuator(int input);
+		unsigned char *get_attenuator(int input);
 	public:
 		TDA7313();
 
 		/* select one of three inputs, starting from 0 */
 		void set_input(int num);
+		int get_input(void);
 
 		/* audio switch functions */
 		void set_loudness(bool on);
+		bool get_loudness(void);
 		void set_gain(int num);
+		int get_gain(void);
 
 		/* volume related functions */
 		unsigned char get_volume(void);
 		void set_volume(unsigned char vol);
 		void increase_volume(void);
 		void decrease_volume(void);
+
+		/* mute is attenuator's lowest level for all output channels */
 		void mute(void);
 
 		/* attenuators */
@@ -73,8 +54,10 @@ class TDA7313 {
 		void attenuator_decrease(int input);
 		void attenuator_increase(int input);
 
-		/* apply all changes */
-		void apply(void);
+		std::vector<unsigned char>* get_i2c_sequence(int options);
+
+		/* write to I2C */
+		void write_data(unsigned char *buf, int length);
 };
 
 #endif

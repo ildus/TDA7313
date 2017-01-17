@@ -1,46 +1,31 @@
+using namespace std;
+
 #include "TDA7313.h"
 #include <cassert>
+#include <cstring>
 
 TDA7313::TDA7313() {
 #ifdef Arduino_h
 	Wire.begin();
 #endif
 
-	//initizalize volume, set to -78.75dB
-	vol_ctrl_data.high_bits = 0;
-	vol_ctrl_data.b = 0b111; //lowest level
-	vol_ctrl_data.a = 0b111;
+	//initizalize volume, set to -78.75dB (lowest level)
+	vol_ctrl_data = 0b00111111;
 
-	//initialize audio switch
-	switch_data.high_bits = 0b010;
-	switch_data.gain = 0; // 11.25dB
-	switch_data.loudness = 0; // loudness on
-	switch_data.input = 0; // input 1
+	//initialize audio switch, gain 11.25dB, loudness on, input 1
+	switch_data = 0b01000000;
 
-	//initialize bass
-	bass_data.high_bits = 0b0110;
-	bass_data.level = 0; // -14dB
+	//initialize bass, -14dB
+	bass_data = 0b01100000;
 
-	//initialize treble
-	treble_data.high_bits = 0b0111;
-	treble_data.level = 0; // -14dB
+	//initialize treble, -14dB
+	treble_data = 0b01110000;
 
 	//initialize attenuators
-	lf_att_data.high_bits = 0b100;
-	lf_att_data.b = 0;
-	lf_att_data.a = 0;
-
-	rf_att_data.high_bits = 0b101;
-	rf_att_data.b = 0;
-	rf_att_data.a = 0;
-
-	lr_att_data.high_bits = 0b110;
-	lr_att_data.b = 0;
-	lr_att_data.a = 0;
-
-	rr_att_data.high_bits = 0b111;
-	rr_att_data.b = 0;
-	rr_att_data.a = 0;
+	lf_att_data = 0b10000000;
+	rf_att_data = 0b10100000;
+	lr_att_data = 0b11000000;
+	rr_att_data = 0b11100000;
 }
 
 /* I2C communication */
@@ -55,68 +40,83 @@ void TDA7313::write_data(unsigned char *buf, int length) {
 }
 
 void TDA7313::set_volume(unsigned char vol) {
-	vol_ctrl_data.b = vol >> 3;
-	vol_ctrl_data.a = vol & 0b00000111;
+	vol_ctrl_data = vol & 0b00111111;
 }
 
 unsigned char TDA7313::get_volume(void) {
-	return (vol_ctrl_data.b << 3) + vol_ctrl_data.a;
+	return vol_ctrl_data; // high two bits are always 0, no need to clean
 }
 
 /*
  * Increase volume for 1.25dB
  */
 void TDA7313::increase_volume(void) {
-	if ((vol_ctrl_data.b == 0) && (vol_ctrl_data.a == 0))
+	if (vol_ctrl_data == 0)
 		return;
 
-	vol_ctrl_data.a -= 1;
-	if (vol_ctrl_data.a == 0b111) { //overflow
-		vol_ctrl_data.b -= 1;
-	}
+	vol_ctrl_data -= 1;
 }
 
 /*
  * Decrease volume for 1.25dB
  */
 void TDA7313::decrease_volume(void) {
-	if ((vol_ctrl_data.b == 0b111) && (vol_ctrl_data.a == 0b111))
+	if (vol_ctrl_data == 0b00111111)
 		return;
 
-	vol_ctrl_data.a += 1;
-	if (vol_ctrl_data.a == 0b000) { //overflow
-		vol_ctrl_data.b += 1;
-	}
+	vol_ctrl_data += 1;
 }
 
-void TDA7313::apply(void) {
-	unsigned char buf[] = {0, 0, 0, 0, 0, 0, 0, 0};
+std::vector<unsigned char>* TDA7313::get_i2c_sequence(int options) {
+	auto v = new std::vector<unsigned char>();
 
-	memcpy(buf, &vol_ctrl_data, 1);
-	memcpy(buf + 1, &switch_data, 1);
-	memcpy(buf + 2, &bass_data, 1);
-	memcpy(buf + 3, &treble_data, 1);
+	if (options & OPT_VOLUME)
+		v->push_back(vol_ctrl_data);
+
+	if (options & OPT_SWITCH)
+		v->push_back(switch_data);
+
+	if (options & OPT_BASS)
+		v->push_back(bass_data);
+
+	if (options & OPT_TREBLE)
+		v->push_back(treble_data);
 
 	//attenuators
-	for (int i; i < 4; i++) {
-		attenuator_ctrl *att_data = get_attenuator(i);
-		assert(att_data != NULL);
-		memcpy(buf + 4 + i, att_data, 1);
+	if (options & OPT_ATTENUATORS) {
+		for (int i; i < 4; i++) {
+			unsigned char *att_data = get_attenuator(i);
+			assert(att_data != nullptr);
+			v->push_back(*att_data);
+		}
 	}
-	this->write_data(buf, sizeof(buf));
+
+	return v;
 }
 
+/* Set audio source, values 0..2 (3 inputs), bits - 000000XX */
 void TDA7313::set_input(int num) {
-	assert(num >= 0 && num <= 2);
-	switch_data.input = num;
+	if (!(num >= 0 && num <= 2))
+		return;
+
+	switch_data = (switch_data & 0b11111100) + num;
 }
 
+int TDA7313::get_input(void) {
+	return switch_data & 0b11;
+}
+
+/* Loudness, bits - 00000X00 */
 void TDA7313::set_loudness(bool on) {
-	switch_data.loudness = int(!on);
+	switch_data ^= (-((int)(!on)) ^ switch_data) & (1 << 2);
+}
+
+bool TDA7313::get_loudness(void) {
+	return !((bool)((switch_data >> 2) & 1));
 }
 
 /*
- * Set gain
+ * Set gain. Bits 000XX000
  * 0	11.25dB
  * 1	7.5dB
  * 2	3.75dB
@@ -124,72 +124,60 @@ void TDA7313::set_loudness(bool on) {
  */
 void TDA7313::set_gain(int num) {
 	assert(num >= 0 && num <= 3);
-	switch_data.gain = num;
+	switch_data &= 0b11100111;
+	switch_data |= num << 3;
+}
+
+int TDA7313::get_gain(void) {
+	return switch_data >> 3 & 0b11;
 }
 
 void TDA7313::mute(void) {
 	for (int i; i < 4; i++) {
-		attenuator_ctrl *att_data = get_attenuator(i);
-		assert(att_data != NULL);
-		att_data->b = 0b11;
-		att_data->a = 0b111;
+		attenuator_set_value(i, 0xFF);
 	}
 }
 
-attenuator_ctrl *TDA7313::get_attenuator(int input) {
+unsigned char *TDA7313::get_attenuator(int input) {
 	switch (input) {
 		case 0: return &lf_att_data;
 		case 1: return &rf_att_data;
 		case 2: return &lr_att_data;
 		case 3: return &rr_att_data;
 	}
-	return NULL;
+	return nullptr;
 }
 
 void TDA7313::attenuator_set_value(int input, unsigned char value) {
-	attenuator_ctrl *att_data = get_attenuator(input);
-	if (att_data == NULL)
+	unsigned char *att_data = get_attenuator(input);
+	if (att_data == nullptr)
 		return;
 
 	value &= 0b00011111;
-	att_data->b = value >> 3;
-	att_data->a = value & 0b00111;
+	*att_data = (*att_data & 0b11100000) + value;
 }
 
 unsigned char TDA7313::attenuator_get_value(int input) {
-	attenuator_ctrl *att_data = get_attenuator(input);
-	assert(att_data != NULL);
-	return (att_data->b << 3) + att_data->a;
+	unsigned char *att_data = get_attenuator(input);
+	assert(att_data != nullptr);
+	return *att_data & 0b00011111;
 }
 
 /* minimum: -38.75dB, means it's muted */
 void TDA7313::attenuator_decrease(int input) {
-	attenuator_ctrl *att_data = get_attenuator(input);
-	if (att_data == NULL)
+	unsigned char val = attenuator_get_value(input);
+	if (val == 0b11111)
 		return;
 
-	if ((att_data->b == 0b11) && (att_data->a == 0b111))
-		/* nothing to decrease */
-		return;
-
-	att_data->a += 1;
-	if (att_data->a == 0) { // overflow
-		att_data->b += 1;
-	}
+	val += 1;
+	attenuator_set_value(input, val);
 }
 
 /* maximum: 0 */
 void TDA7313::attenuator_increase(int input) {
-	attenuator_ctrl *att_data = get_attenuator(input);
-	if (att_data == NULL)
+	unsigned char val = attenuator_get_value(input);
+	if (val == 0)
 		return;
 
-	if ((att_data->b == 0) && (att_data->a == 0))
-		/* nothing to increase */
-		return;
-
-	att_data->a -= 1;
-	if (att_data->a == 0b111) { // overflow
-		att_data->b -= 1;
-	}
+	attenuator_set_value(input, --val);
 }
