@@ -24,6 +24,7 @@ TEST_CASE("TDA7313 I2C", "[i2c]" ) {
 
 		tda->increase_volume();
 		REQUIRE(tda->get_volume() == 0b00000000); //highest level
+		REQUIRE(tda->is_volume_at_max() == true);
 		tda->increase_volume();
 		REQUIRE(tda->get_volume() == 0b00000000); //same
 
@@ -33,6 +34,7 @@ TEST_CASE("TDA7313 I2C", "[i2c]" ) {
 		tda->set_volume(0b00111110);
 		tda->decrease_volume();
 		REQUIRE(tda->get_volume() == 0b00111111); //lowest level
+		REQUIRE(tda->is_volume_at_min() == true);
 		tda->decrease_volume();
 		REQUIRE(tda->get_volume() == 0b00111111); //same
 	}

@@ -53,11 +53,19 @@ unsigned char TDA7313::get_volume(void) {
 	return vol_ctrl_data; // high two bits are always 0, no need to clean
 }
 
+bool TDA7313::is_volume_at_min(void) {
+	return vol_ctrl_data == 0b00111111;
+}
+
+bool TDA7313::is_volume_at_max(void) {
+	return vol_ctrl_data == 0;
+}
+
 /*
  * Increase volume for 1.25dB
  */
 void TDA7313::increase_volume(void) {
-	if (vol_ctrl_data == 0)
+	if (is_volume_at_max())
 		return;
 
 	vol_ctrl_data -= 1;
@@ -67,7 +75,7 @@ void TDA7313::increase_volume(void) {
  * Decrease volume for 1.25dB
  */
 void TDA7313::decrease_volume(void) {
-	if (vol_ctrl_data == 0b00111111)
+	if (is_volume_at_min())
 		return;
 
 	vol_ctrl_data += 1;

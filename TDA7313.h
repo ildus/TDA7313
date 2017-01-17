@@ -44,6 +44,8 @@ class TDA7313 {
 		void set_volume(unsigned char vol);
 		void increase_volume(void);
 		void decrease_volume(void);
+		bool is_volume_at_min(void);
+		bool is_volume_at_max(void);
 
 		/* mute is attenuator's lowest level for all output channels */
 		void mute(void);
