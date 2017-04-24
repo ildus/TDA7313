@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/ildus/TDA7313.svg?branch=master)](https://travis-ci.org/ildus/TDA7313)
+
 # TDA7313 library for Arduino
 
 ## About
