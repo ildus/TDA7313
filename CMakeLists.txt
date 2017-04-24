@@ -4,3 +4,7 @@ include_directories(.)
 add_executable(test tests/test.cpp)
 add_library(tda7313 STATIC TDA7313.cpp)
 target_link_libraries(test tda7313)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED on)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
